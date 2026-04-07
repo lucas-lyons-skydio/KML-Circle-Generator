@@ -4,7 +4,7 @@ A simple, browser-based tool to create KML files with radius circles from street
 
 ## 🚀 Live Tool
 
-**[Launch KML Circle Generator]([https://lucas-lyons-skydio.github.io/KML-Circle-Generator/]))**
+**[Launch KML Circle Generator](https://lucas-lyons-skydio.github.io/KML-Circle-Generator/)**
 
 ## ✨ Features
 
