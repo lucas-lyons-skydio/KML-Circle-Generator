@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KML Circle Generator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        body {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4285f4;
+            padding-bottom: 10px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #4285f4;
+            font-size: 1.2em;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #4285f4;
+        }
+        .location-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr auto;
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .location-row input {
+            margin-bottom: 0;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background: #4285f4;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #3367d6;
+        }
+        .btn-secondary {
+            background: #34a853;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #2d8e47;
+        }
+        .btn-danger {
+            background: #ea4335;
+            color: white;
+            padding: 8px 12px;
+        }
+        .btn-danger:hover {
+            background: #c5221f;
+        }
+        .btn-add {
+            background: #fbbc04;
+            color: #333;
+            margin-top: 10px;
+        }
+        .btn-add:hover {
+            background: #f9a825;
+        }
+        #status {
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: none;
+        }
+        #status.success {
+            background: #e6f4ea;
+            color: #1e7e34;
+            display: block;
+        }
+        #status.error {
+            background: #fce8e6;
+            color: #c5221f;
+            display: block;
+        }
+        #status.info {
+            background: #e8f0fe;
+            color: #1967d2;
+            display: block;
+        }
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 4px 4px 0;
+        }
+        .instructions code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .geocode-status {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+        .geocode-status.success { color: #34a853; }
+        .geocode-status.error { color: #ea4335; }
+        .geocode-status.pending { color: #fbbc04; }
+    </style>
+</head>
+<body>
+    <h1>📍 KML Circle Generator</h1>
+    
+    <div class="instructions">
+        <strong>How to use:</strong>
+        <ol style="margin: 10px 0; padding-left: 20px;">
+            <li>Enter your locations (name + full address)</li>
+            <li>Set the circle radius in miles</li>
+            <li>Click "Geocode Addresses" to convert addresses to coordinates</li>
+            <li>Click "Generate KML" to download your file</li>
+            <li>Open the KML in <strong>Google Earth</strong> or import into <strong>Google My Maps</strong></li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>⚙️ Settings</h2>
+        <label for="radius">Circle Radius (miles)</label>
+        <input type="number" id="radius" value="2.5" min="0.1" max="50" step="0.1">
+    </div>
+
+    <div class="card">
+        <h2>📋 Locations (max 10)</h2>
+        <div id="locations-container">
+            <div class="location-row" data-index="0">
+                <div>
+                    <label>Name</label>
+                    <input type="text" class="loc-name" placeholder="Fire Station 1">
+                </div>
+                <div>
+                    <label>Address</label>
+                    <input type="text" class="loc-address" placeholder="123 Main St, Bristol, CT 06010">
+                </div>
+                <button class="btn-danger" onclick="removeLocation(this)">✕</button>
+            </div>
+        </div>
+        <button class="btn-add" onclick="addLocation()">+ Add Location</button>
+    </div>
+
+    <div class="card">
+        <h2>🚀 Generate</h2>
+        <div class="actions">
+            <button class="btn-primary" onclick="geocodeAll()">1. Geocode Addresses</button>
+            <button class="btn-secondary" onclick="generateKML()">2. Generate & Download KML</button>
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <div class="card">
+        <h2>ℹ️ About</h2>
+        <p style="color: #666; margin: 0;">
+            This tool uses the free <a href="https://nominatim.openstreetmap.org/" target="_blank">OpenStreetMap Nominatim</a> 
+            geocoding service. Please allow 1-2 seconds between geocoding requests. Works on any device with a modern browser.
+        </p>
+    </div>
+
+    <script>
+        let geocodedLocations = [];
+        
+        function addLocation() {
+            const container = document.getElementById('locations-container');
+            const count = container.children.length;
+            
+            if (count >= 10) {
+                showStatus('Maximum 10 locations allowed.', 'error');
+                return;
+            }
+            
+            const row = document.createElement('div');
+            row.className = 'location-row';
+            row.dataset.index = count;
+            row.innerHTML = `
+                <div>
+                    <label>Name</label>
+                    <input type="text" class="loc-name" placeholder="Location ${count + 1}">
+                </div>
+                <div>
+                    <label>Address</label>
+                    <input type="text" class="loc-address" placeholder="123 Main St, City, State ZIP">
+                </div>
+                <button class="btn-danger" onclick="removeLocation(this)">✕</button>
+            `;
+            container.appendChild(row);
+        }
+        
+        function removeLocation(btn) {
+            const container = document.getElementById('locations-container');
+            if (container.children.length > 1) {
+                btn.parentElement.remove();
+            } else {
+                showStatus('You need at least one location.', 'error');
+            }
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+        }
+        
+        async function geocodeAddress(address) {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+            
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'KML-Circle-Generator-Web/1.0'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data && data.length > 0) {
+                return {
+                    lat: parseFloat(data[0].lat),
+                    lon: parseFloat(data[0].lon)
+                };
+            }
+            return null;
+        }
+        
+        async function geocodeAll() {
+            const rows = document.querySelectorAll('.location-row');
+            const locations = [];
+            
+            for (const row of rows) {
+                const name = row.querySelector('.loc-name').value.trim();
+                const address = row.querySelector('.loc-address').value.trim();
+                
+                if (name && address) {
+                    locations.push({ name, address, row });
+                }
+            }
+            
+            if (locations.length === 0) {
+                showStatus('Please enter at least one location with name and address.', 'error');
+                return;
+            }
+            
+            showStatus(`Geocoding ${locations.length} addresses... Please wait.`, 'info');
+            geocodedLocations = [];
+            
+            for (let i = 0; i < locations.length; i++) {
+                const loc = locations[i];
+                showStatus(`Geocoding ${i + 1}/${locations.length}: ${loc.name}...`, 'info');
+                
+                try {
+                    const coords = await geocodeAddress(loc.address);
+                    
+                    if (coords) {
+                        geocodedLocations.push({
+                            name: loc.name,
+                            address: loc.address,
+                            lat: coords.lat,
+                            lon: coords.lon
+                        });
+                        
+                        // Add success indicator
+                        let statusSpan = loc.row.querySelector('.geocode-status');
+                        if (!statusSpan) {
+                            statusSpan = document.createElement('span');
+                            statusSpan.className = 'geocode-status';
+                            loc.row.appendChild(statusSpan);
+                        }
+                        statusSpan.textContent = `✓ ${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)}`;
+                        statusSpan.className = 'geocode-status success';
+                    } else {
+                        let statusSpan = loc.row.querySelector('.geocode-status');
+                        if (!statusSpan) {
+                            statusSpan = document.createElement('span');
+                            statusSpan.className = 'geocode-status';
+                            loc.row.appendChild(statusSpan);
+                        }
+                        statusSpan.textContent = '✗ Not found';
+                        statusSpan.className = 'geocode-status error';
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+                
+                // Rate limiting - wait 1.1 seconds between requests
+                if (i < locations.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1100));
+                }
+            }
+            
+            showStatus(`Geocoding complete! ${geocodedLocations.length}/${locations.length} addresses found. Click "Generate & Download KML" to continue.`, 'success');
+        }
+        
+        function createCircleCoords(lat, lon, radiusMiles, numPoints = 64) {
+            const coords = [];
+            const radiusKm = radiusMiles * 1.60934;
+            
+            for (let i = 0; i <= numPoints; i++) {
+                const angle = (i / numPoints) * 2 * Math.PI;
+                const dx = radiusKm * Math.cos(angle);
+                const dy = radiusKm * Math.sin(angle);
+                
+                const newLat = lat + (dy / 111.32);
+                const newLon = lon + (dx / (111.32 * Math.cos(lat * Math.PI / 180)));
+                
+                coords.push(`${newLon},${newLat},0`);
+            }
+            
+            return coords.join(' ');
+        }
+        
+        function generateKML() {
+            if (geocodedLocations.length === 0) {
+                showStatus('Please geocode addresses first by clicking "Geocode Addresses".', 'error');
+                return;
+            }
+            
+            const radius = parseFloat(document.getElementById('radius').value) || 2.5;
+            const colors = ['ff0000ff', 'ff00ff00', 'ffff0000', 'ffff00ff', 'ff00ffff', 
+                          'ff0080ff', 'ff80ff00', 'ffff8000', 'ff8000ff', 'ff00ff80'];
+            
+            let kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+    <name>Coverage Circles (${radius} mile radius)</name>
+    <description>Generated by KML Circle Generator</description>
+`;
+            
+            // Add styles
+            for (let i = 0; i < geocodedLocations.length; i++) {
+                const color = colors[i % colors.length];
+                kml += `
+    <Style id="style${i}">
+        <LineStyle>
+            <color>${color}</color>
+            <width>3</width>
+        </LineStyle>
+        <PolyStyle>
+            <color>40${color.slice(2)}</color>
+        </PolyStyle>
+    </Style>`;
+            }
+            
+            // Add placemarks
+            for (let i = 0; i < geocodedLocations.length; i++) {
+                const loc = geocodedLocations[i];
+                const circleCoords = createCircleCoords(loc.lat, loc.lon, radius);
+                
+                kml += `
+    <Placemark>
+        <name>${loc.name} (${radius} mi radius)</name>
+        <description>${loc.address}</description>
+        <styleUrl>#style${i}</styleUrl>
+        <Polygon>
+            <outerBoundaryIs>
+                <LinearRing>
+                    <coordinates>${circleCoords}</coordinates>
+                </LinearRing>
+            </outerBoundaryIs>
+        </Polygon>
+    </Placemark>
+    <Placemark>
+        <name>${loc.name}</name>
+        <description>${loc.address}</description>
+        <Point>
+            <coordinates>${loc.lon},${loc.lat},0</coordinates>
+        </Point>
+    </Placemark>`;
+            }
+            
+            kml += `
+</Document>
+</kml>`;
+            
+            // Download
+            const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `coverage_circles_${radius}mi.kml`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showStatus(`KML file downloaded! Open it in Google Earth or import into Google My Maps.`, 'success');
+        }
+    </script>
+</body>
+</html>
