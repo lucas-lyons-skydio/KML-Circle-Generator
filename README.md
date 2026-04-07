@@ -18,7 +18,7 @@ A simple, browser-based tool to create KML files with radius circles from street
 ## 📖 How to Use
 
 ### Step 1: Open the Tool
-Click the link above or open `index.html` in any web browser.
+Click the link above in any web browser.
 
 ### Step 2: Set Your Radius
 Enter your desired circle radius in miles (e.g., `2.5` for 2.5-mile circles).
