@@ -4,7 +4,9 @@ A simple, browser-based tool to create KML files with radius circles from street
 
 ## 🚀 Live Tool
 
-**[Launch KML Circle Generator](https://lucas-lyons-skydio.github.io/KML-Circle-Generator/)**
+**[Launch KML Circle Generator](https://YOUR-USERNAME.github.io/kml-circle-generator/)**
+
+*(Replace with your actual GitHub Pages URL)*
 
 ## ✨ Features
 
@@ -12,29 +14,37 @@ A simple, browser-based tool to create KML files with radius circles from street
 - **No installation** – Runs entirely in your browser
 - **Address geocoding** – Converts street addresses to coordinates automatically
 - **Customizable radius** – Set any radius in miles
-- **Up to 10 locations** – Add multiple locations in one KML file
+- **Up to 25 locations** – Add multiple locations in one KML file
+- **CSV upload** – Import locations from a CSV file (drag & drop supported)
 - **Free** – Uses OpenStreetMap's free geocoding service
 
 ## 📖 How to Use
 
 ### Step 1: Open the Tool
-Click the link above in any web browser.
+Click the link above or open `index.html` in any web browser.
 
 ### Step 2: Set Your Radius
 Enter your desired circle radius in miles (e.g., `2.5` for 2.5-mile circles).
 
 ### Step 3: Add Locations
-For each location, enter:
+
+**Option A: Upload a CSV file**
+1. Drag & drop a CSV file onto the upload zone, or click to browse
+2. CSV must have columns: `address`, `name`
+3. Up to 25 locations will be imported
+
+**CSV format example:**
+```csv
+name,address
+Fire Station 1,"123 Main Street, Bristol, CT 06010"
+Police HQ,"456 Oak Avenue, Hartford, CT 06103"
+City Hall,"789 Center St, Bristol, CT 06010"
+```
+
+**Option B: Enter manually**
 - **Name** – A label for the location (e.g., "Fire Station 1")
 - **Address** – Full street address including city, state, and ZIP code
-
-Click **"+ Add Location"** to add more (up to 10).
-
-**Example addresses:**
-```
-123 Main Street, Bristol, CT 06010
-456 Oak Avenue, Hartford, CT 06103
-```
+- Click **"+ Add Location"** to add more (up to 25)
 
 ### Step 4: Geocode Addresses
 Click **"Geocode Addresses"** to convert your addresses to latitude/longitude coordinates.
