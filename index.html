@@ -148,6 +148,54 @@
         .geocode-status.success { color: #34a853; }
         .geocode-status.error { color: #ea4335; }
         .geocode-status.pending { color: #fbbc04; }
+        
+        .csv-upload {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+        .csv-upload:hover {
+            border-color: #4285f4;
+            background-color: #f8f9ff;
+        }
+        .csv-upload.dragover {
+            border-color: #34a853;
+            background-color: #e6f4ea;
+        }
+        .csv-upload input[type="file"] {
+            display: none;
+        }
+        .csv-upload label {
+            cursor: pointer;
+            color: #4285f4;
+            font-weight: 600;
+        }
+        .csv-upload label:hover {
+            text-decoration: underline;
+        }
+        .csv-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            color: #999;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+        .divider span {
+            padding: 0 10px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -171,7 +219,16 @@
     </div>
 
     <div class="card">
-        <h2>📋 Locations (max 10)</h2>
+        <h2>📋 Locations (max 25)</h2>
+        
+        <div class="csv-upload" id="csv-drop-zone">
+            <input type="file" id="csv-file" accept=".csv" onchange="handleCSVUpload(event)">
+            <label for="csv-file">📁 Click to upload CSV or drag & drop</label>
+            <div class="csv-info">CSV must have columns: <code>address</code>, <code>name</code></div>
+        </div>
+        
+        <div class="divider"><span>OR enter manually</span></div>
+        
         <div id="locations-container">
             <div class="location-row" data-index="0">
                 <div>
@@ -208,12 +265,134 @@
     <script>
         let geocodedLocations = [];
         
+        // CSV Upload handling
+        const dropZone = document.getElementById('csv-drop-zone');
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                parseCSV(file);
+            } else {
+                showStatus('Please upload a CSV file.', 'error');
+            }
+        });
+        
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                parseCSV(file);
+            }
+        }
+        
+        function parseCSV(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/).filter(line => line.trim());
+                
+                if (lines.length < 2) {
+                    showStatus('CSV file appears to be empty or has no data rows.', 'error');
+                    return;
+                }
+                
+                // Parse header
+                const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/["']/g, ''));
+                const addressIdx = header.findIndex(h => h === 'address');
+                const nameIdx = header.findIndex(h => h === 'name');
+                
+                if (addressIdx === -1 || nameIdx === -1) {
+                    showStatus('CSV must have columns: address, name. Found: ' + header.join(', '), 'error');
+                    return;
+                }
+                
+                // Clear existing locations
+                const container = document.getElementById('locations-container');
+                container.innerHTML = '';
+                
+                // Parse data rows
+                let count = 0;
+                for (let i = 1; i < lines.length && count < 25; i++) {
+                    const values = parseCSVLine(lines[i]);
+                    if (values.length > Math.max(addressIdx, nameIdx)) {
+                        const address = values[addressIdx].trim();
+                        const name = values[nameIdx].trim();
+                        
+                        if (address && name) {
+                            addLocationWithData(name, address);
+                            count++;
+                        }
+                    }
+                }
+                
+                if (count === 0) {
+                    showStatus('No valid locations found in CSV.', 'error');
+                    addLocation(); // Add empty row
+                } else {
+                    showStatus(`Loaded ${count} locations from CSV. Click "Geocode Addresses" to continue.`, 'success');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // Handle CSV values with commas inside quotes
+        function parseCSVLine(line) {
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    values.push(current.trim().replace(/^"|"$/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            values.push(current.trim().replace(/^"|"$/g, ''));
+            return values;
+        }
+        
+        function addLocationWithData(name, address) {
+            const container = document.getElementById('locations-container');
+            const count = container.children.length;
+            
+            const row = document.createElement('div');
+            row.className = 'location-row';
+            row.dataset.index = count;
+            row.innerHTML = `
+                <div>
+                    <label>Name</label>
+                    <input type="text" class="loc-name" value="${name.replace(/"/g, '&quot;')}">
+                </div>
+                <div>
+                    <label>Address</label>
+                    <input type="text" class="loc-address" value="${address.replace(/"/g, '&quot;')}">
+                </div>
+                <button class="btn-danger" onclick="removeLocation(this)">✕</button>
+            `;
+            container.appendChild(row);
+        }
+        
         function addLocation() {
             const container = document.getElementById('locations-container');
             const count = container.children.length;
             
-            if (count >= 10) {
-                showStatus('Maximum 10 locations allowed.', 'error');
+            if (count >= 25) {
+                showStatus('Maximum 25 locations allowed.', 'error')
                 return;
             }
             
@@ -363,7 +542,10 @@
             
             const radius = parseFloat(document.getElementById('radius').value) || 2.5;
             const colors = ['ff0000ff', 'ff00ff00', 'ffff0000', 'ffff00ff', 'ff00ffff', 
-                          'ff0080ff', 'ff80ff00', 'ffff8000', 'ff8000ff', 'ff00ff80'];
+                          'ff0080ff', 'ff80ff00', 'ffff8000', 'ff8000ff', 'ff00ff80',
+                          'ff4040ff', 'ff40ff40', 'ffff4040', 'ff40ffff', 'ffff40ff',
+                          'ff8080ff', 'ff80ff80', 'ffff8080', 'ff80ffff', 'ffff80ff',
+                          'ffc00000', 'ff00c000', 'ff0000c0', 'ffc0c000', 'ff00c0c0'];
             
             let kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
